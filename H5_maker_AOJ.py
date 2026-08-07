@@ -304,7 +304,7 @@ def NanoReader(inputFileNames=["in.root"], outputFileName="out.root", json = '',
 
 
             if count % 10000 == 0 :
-                print('--------- Processing Event ' + str(count) +'   -- percent complete ' + str(100*count/nTotal/nFiles) + '% -- ')
+                #print('--------- Processing Event ' + str(count) +'   -- percent complete ' + str(100*count/nTotal/nFiles) + '% -- ')
 
             count +=1
             # Grab the event
