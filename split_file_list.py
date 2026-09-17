@@ -1,37 +1,74 @@
+#!/usr/bin/env python
+# Split a dataset file list (file_lists/<dataset>.txt) into per-condor-job
+# file lists, written to:
+#   EOS_files_split/<dataset>/<dataset>_job{i}.txt
+#
+# Usage:
+#   python3 split_file_list.py <dataset> [--files_per_job N]
+#
+# The number of jobs is computed automatically from the number of files in
+# the list. Each dataset gets its own subdirectory so that tarballs only ever
+# contain one dataset and directories don't fill up with thousands of files.
+
 import os
+import sys
+import argparse
 
-#nJobs = 1309
-#inputList =  "2016H.txt"
-nJobs = 3165
-inputList =  "file_lists/CMS_mc_RunIISummer20UL16MiniAODv2_TTToSemiLeptonic.txt"
-label = "CMS_mc_RunIISummer20UL16MiniAODv2_TTToSemiLeptonic_job%i"
+def dataset_type(dataset):
+    # MC file lists are conventionally named file_lists/CMS_mc_*.txt
+    return "MC" if dataset.startswith("CMS_mc_") else "data"
 
-odir = "EOS_files_split/"
+def files_per_job_for(dataset):
+    # MC files are larger; give extra jobs. Data files run faster so allow
+    # more files per job. Overridable with --files_per_job.
+    return 3 if dataset_type(dataset) == "MC" else 8
 
-fin = open(inputList)
+def main():
+    parser = argparse.ArgumentParser(
+        description="Split file_lists/<dataset>.txt into per-job lists under EOS_files_split/<dataset>/")
+    parser.add_argument("dataset", help="Dataset name, matching file_lists/<dataset>.txt")
+    parser.add_argument("--files_per_job", type=int, default=None,
+                        help="Number of files per condor job. Defaults are per data/MC type.")
+    parser.add_argument("--jobs_per_file", type=int, default=None,
+                        help="Alternative: number of files per job (alias for --files_per_job).")
+    args = parser.parse_args()
 
-f_list = fin.readlines()
+    dataset = args.dataset
+    if dataset.endswith(".txt"):
+        dataset = dataset[:-4]
+    if "/" in dataset:
+        dataset = dataset.split("/")[-1]
 
-num_lines = len(f_list)
-batch_size = (num_lines//nJobs)
-remainder = num_lines % nJobs
+    inputList = os.path.join("file_lists", dataset + ".txt")
+    if not os.path.exists(inputList):
+        sys.exit("ERROR: input file list %s not found" % inputList)
 
-start = 0
-end = 0
+    fpe = args.files_per_job or args.jobs_per_file or files_per_job_for(dataset)
 
+    f_list = [line for line in open(inputList) if line.strip()]
+    num_lines = len(f_list)
+    if num_lines == 0:
+        sys.exit("ERROR: %s is empty" % inputList)
 
-for i in range(nJobs):
+    nJobs = -(-num_lines // fpe)  # ceil division
 
-    start = end
-    end = start + batch_size if i < (nJobs-1) else num_lines
-    if(i< remainder): end+=1
-    #print(start, end)
-    f_out = f_list[ start:end ]
+    odir = os.path.join("EOS_files_split", dataset)
+    if os.path.exists(odir):
+        os.system("rm -rf %s" % odir)
+    os.makedirs(odir)
 
-    out_file = open(odir + (label %i) + ".txt", "w")
-    for line in f_out:
-        out_file.write(line)
+    label = "%s_job%%i" % dataset
 
-    out_file.close()
+    for i in range(nJobs):
+        f_out = f_list[i * fpe:(i + 1) * fpe]
+        out_file = open(os.path.join(odir, label % i) + ".txt", "w")
+        for line in f_out:
+            out_file.write(line)
+        out_file.close()
 
+    print("Split %d files into %d jobs (%d files/job)" % (num_lines, nJobs, fpe))
+    print("Output: %s/%s_job{i}.txt" % (odir, dataset))
+    print("Type: %s" % dataset_type(dataset))
 
+if __name__ == "__main__":
+    main()

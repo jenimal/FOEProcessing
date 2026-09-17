@@ -1,5 +1,34 @@
-*.h5
-*.txt
+# ── analysis outputs ──────────────────────────────────────────────────
 *.root
+*.h5
+*.tgz
+
+# ── condor runtime (regenerated on every run) ─────────────────────────
+condor_jobs/
+EOS_files_split/
+*.jdl
+*.jdl.log
+*.jdl.stdout
+my_script.sh
+condor_script_templates/script_temp.sh
+condor_script_templates/script_temp_mc.sh
+
+# ── dataset file lists (fetch with fetch_file_lists.py) ───────────────
+file_lists/
+
+# ── golden JSON is committed (needed by the pipeline), despite *.txt —─
+!Cert_*.txt
+
+# ── python ────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+
+# ── internal notes / reports (not for public release) ────────────────
+PRODUCTION_RUNBOOK_NOTES.txt
+WEEKLY_REPORT*.md
+
+# ── editors / OS / scratch ────────────────────────────────────────────
 *.swp
+cmd.tmp
 *.un~
+.DS_Store

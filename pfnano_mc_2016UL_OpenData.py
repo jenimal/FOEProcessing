@@ -8,6 +8,7 @@ import FWCore.ParameterSet.Config as cms
 from Configuration.Eras.Era_Run2_2016_cff import Run2_2016
 from Configuration.Eras.Modifier_run2_nanoAOD_106Xv2_cff import run2_nanoAOD_106Xv2
 import FWCore.ParameterSet.VarParsing as VarParsing
+import sys
 
 process = cms.Process('NANO',Run2_2016,run2_nanoAOD_106Xv2)
 
@@ -23,10 +24,28 @@ process.load('PhysicsTools.NanoAOD.nano_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
+def loadFiles(afile):
+    with open(afile) as f:
+        return [line.strip() for line in f if line.strip()]
+
+
+# VarParsing in this release rejects registering any name containing '_',
+# so 'inputFiles_load' can't be a VarParsing option. Peel it off the command
+# line ourselves and feed the list into the built-in 'inputFiles' option.
+_inputfiles_list = None
+_cliargs = [a for a in sys.argv[1:] if not a.startswith('inputFiles_load=')]
+for a in sys.argv[1:]:
+    if a.startswith('inputFiles_load='):
+        _inputfiles_list = a.split('=', 1)[1]
+sys.argv = [sys.argv[0]] + _cliargs
+
 options = VarParsing.VarParsing ('analysis')
 #options.inputFiles = "test.root"
 options.maxEvents = -1
 options.parseArguments()
+
+if _inputfiles_list:
+    options.inputFiles = loadFiles(_inputfiles_list)
 
 #print(options)
 #print(options.inputFiles)
